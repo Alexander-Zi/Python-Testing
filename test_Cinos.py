@@ -10,6 +10,7 @@ class TestDrink(unittest.TestCase):
         d = Drink()
         d.set_base("pokecola")
         self.assertEqual(d.get_base(), "pokecola")
+
     def test_invalid_base_raises(self):
         d = Drink()
         with self.assertRaises(ValueError):
@@ -37,26 +38,51 @@ class TestDrink(unittest.TestCase):
         with self.assertRaises(ValueError):
             d.add_size("extra grande")
 
-    def test_cost_with_tax(self):
+    def test_add_food_and_cost(self):
         d = Drink()
-        d.set_base("Mr.Salt")     # $2.00
-        d.add_flavor("mint")      # $0.15
-        d.add_flavor("lime")      # $0.15
-        d.add_size("small")       # $1.50
-        subtotal = 2.00 + 0.15 + 0.15 + 1.50
+        d.add_food("hotdog")
+        d.set_base("water")
+        d.add_size("small")
+        subtotal = 1.00 + 1.50 + 2.30
         expected = round(subtotal * 1.0725, 2)
         self.assertEqual(d.get_cost(), expected)
+
+    def test_invalid_food_raises(self):
+        d = Drink()
+        with self.assertRaises(ValueError):
+            d.add_food("lava fries")
+
+    def test_add_toppings_and_cost(self):
+        d = Drink()
+        d.set_base("water")
+        d.add_size("small")
+        d.add_food("hotdog")
+        d.add_topping("Ketchup")
+        d.add_topping("Chilli")
+        subtotal = 1.00 + 1.50 + 2.30 + 0.00 + 0.60
+        expected = round(subtotal * 1.0725, 2)
+        self.assertEqual(d.get_cost(), expected)
+
+    def test_invalid_topping_raises(self):
+        d = Drink()
+        with self.assertRaises(ValueError):
+            d.add_topping("gold flakes")
 
     def test_generate_receipt_format(self):
         d = Drink()
         d.set_base("hill fog")
         d.add_flavor("blueberry")
         d.add_size("large")
+        d.add_food("ice cream")
+        d.add_topping("Cherry")
         receipt = d.generate_receipt()
         self.assertIn("======= DRINK RECEIPT =======", receipt)
         self.assertIn("Base: hill fog - $2.25", receipt)
         self.assertIn("- blueberry - $0.15", receipt)
         self.assertIn("Size: large - $2.05", receipt)
+        self.assertIn("Food: ice cream - $3.00", receipt)
+        self.assertIn("Toppings:", receipt)
+        self.assertIn("- Cherry - $0.00", receipt)
         self.assertIn("Total (with tax):", receipt)
 
     def test_str_representation(self):
@@ -70,11 +96,11 @@ class TestDrink(unittest.TestCase):
         self.assertIn("Mega", output)
         self.assertIn("Total (with tax):", output)
 
-    def test_str_no_flavors(self):
+    def test_str_only_base(self):
         d = Drink()
         d.set_base("water")
         output = str(d)
-        self.assertIn("no flavors", output)
+        self.assertIn("Drink with base: water", output)
 
     def test_str_no_base(self):
         d = Drink()
@@ -88,7 +114,11 @@ class TestMainIntegration(unittest.TestCase):
         '1',       # flavor: lemon ($0.15)
         '2',       # flavor: cherry ($0.15)
         'done',
-        '1'        # size: small ($1.50)
+        '1',       # size: small ($1.50)
+        '1',       # food: hotdog ($2.30)
+        '1',       # topping: Cherry ($0.00)
+        '6',       # topping: Chilli ($0.60)
+        'done'
     ])
     @patch("sys.stdout", new_callable=StringIO)
     def test_main_output(self, mock_stdout, mock_input):
@@ -98,9 +128,12 @@ class TestMainIntegration(unittest.TestCase):
         self.assertIn("Base 'sbrite' selected", output)
         self.assertIn("Added flavor: lemon", output)
         self.assertIn("Added flavor: cherry", output)
+        self.assertIn("Food 'hotdog' selected", output)
+        self.assertIn("Added topping: Cherry", output)
+        self.assertIn("Added topping: Chilli", output)
         self.assertIn("DRINK RECEIPT", output)
 
-        subtotal = 1.50 + 0.15 + 0.15 + 1.50
+        subtotal = 1.50 + 0.15 + 0.15 + 1.50 + 2.30 + 0.00 + 0.60
         expected_total = round(subtotal * 1.0725, 2)
         self.assertIn(f"Total (with tax): ${expected_total:.2f}", output)
 
